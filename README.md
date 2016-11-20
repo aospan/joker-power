@@ -20,7 +20,15 @@ make
 ```
 
 now you can start monitoring:
-`./joker-power`
+```
+# ./joker-power 
+ts=1479612120 total_uj=1349088 watts=1.349088 voltage=4.169110
+ts=1479612121 total_uj=2526272 watts=1.177184 voltage=4.169110
+ts=1479612122 total_uj=3686688 watts=1.160416 voltage=4.169110
+ts=1479612123 total_uj=4884320 watts=1.197632 voltage=4.178886
+ts=1479612124 total_uj=6111712 watts=1.227392 voltage=4.173998
+ts=1479612125 total_uj=7297344 watts=1.185632 voltage=4.173998
+```
 
 usage:
 ```
