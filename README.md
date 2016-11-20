@@ -54,3 +54,8 @@ modprobe i2c_dev
 modprobe intel_rapl
 ```
 otherwise you need to recompile your kernel with this modules enabled.
+
+## Result for battery drain for Joker
+
+![alt tag](https://raw.githubusercontent.com/aospan/joker-power/master/images/battery-discharge.png)
+
