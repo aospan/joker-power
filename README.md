@@ -7,7 +7,8 @@ Battery voltage obtained from BD2613GW PMIC (ADC used for digitize voltage). CPU
  * Personal mobile Linux server (aka "Joker") - http://jokersys.com
  * Microsoft Surface 3 (not 'pro' version) with Debian Linux
 
- Before compilation please install following package: 
+
+Before compilation please install following package: 
  `apt-get install libi2c-dev`
 
 and then you can start compilation:
