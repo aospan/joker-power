@@ -23,7 +23,8 @@
 #include <time.h>
 #include <sys/ioctl.h>
 
-#define FILENAME "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/energy_uj"
+#define FILENAME_PKG "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/energy_uj"
+#define FILENAME_CORE "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/energy_uj"
 #define I2C_ADDR 0x6E 
 
 void usage()
@@ -41,15 +42,15 @@ int64_t get_ts()
     return tv.tv_sec*1000000 + tv.tv_usec;
 }
 
-int64_t get_uj()
+int64_t get_uj(char *file)
 {
     int64_t uj = 0;
     FILE * fd = NULL;
 
-    fd = fopen(FILENAME, "r");
+    fd = fopen(file, "r");
     if (fd < 0)
     {
-        fprintf(stderr, "can't open file %s. error = %s (%d)\n", FILENAME, strerror(errno), errno);
+        fprintf(stderr, "can't open file %s. error = %s (%d)\n", file, strerror(errno), errno);
         return 0;
     }
     fscanf(fd, "%llu", &uj);
@@ -109,10 +110,10 @@ double get_voltage(int bus_id)
 
 int main (int argc, char **argv)
 {
-    int fdo, res, c, interval=1, bus_id = 1;
+    int fdo, res, c, interval=1, bus_id = 1, i = 0;
     char buf[512], obuf[512];
-    int64_t uj, ujprev = 0, uj_start, ts, last_ts;
-    double delta = 0, uj_cur = 0, voltage = 0;
+    int64_t uj[2], ujprev[2] = {0}, uj_start[2], ts, last_ts;
+    double delta = 0, uj_cur[2] = {0}, voltage = 0;
     char *outfile = NULL;
     time_t t = 0;
     struct tm *tm = NULL;
@@ -148,21 +149,25 @@ int main (int argc, char **argv)
         }
 
         /* write header to outfile */
-        res = snprintf(obuf, sizeof(obuf), "date;time;timestamp;ujoules;watt;voltage\n", ts, uj - uj_start, uj_cur, voltage);
+        res = snprintf(obuf, sizeof(obuf), "date;time;timestamp;ujoules;watt_pkg;watt_core;voltage\n");
         write(fdo, obuf, res);
     }
 
-    uj_start = get_uj();
+    uj_start[0] = get_uj(FILENAME_PKG);
+    uj_start[1] = get_uj(FILENAME_CORE);
+
     last_ts = ts;
     while (1)
     {
-        uj = get_uj();
+        uj[0] = get_uj(FILENAME_PKG);
+        uj[1] = get_uj(FILENAME_CORE);
 
         /* update timestamps */
         ts = get_ts();
         delta = (ts - last_ts)/1000000;
         last_ts = ts;
-        uj_cur = (double)(ujprev?(uj-ujprev):0)/(delta*1000000);
+        for (i = 0; i < 2; i++)
+            uj_cur[i] = (double)(ujprev[i]?(uj[i]-ujprev[i]):0)/(delta*1000000);
         voltage = get_voltage(bus_id);
 
         if (fdo > 0)
@@ -171,14 +176,15 @@ int main (int argc, char **argv)
             tm = localtime(&t);
             strftime(buf, sizeof(buf), "%m/%d/%Y;%T", tm);
 
-            res = snprintf(obuf, sizeof(obuf), "%s;%llu;%llu;%f;%f\n", buf, ts, uj - uj_start, uj_cur, voltage);
+            res = snprintf(obuf, sizeof(obuf), "%s;%llu;%llu;%f;%f;%f\n", buf, ts, uj[0] - uj_start[0], uj_cur[0], uj_cur[1], voltage);
             write(fdo, obuf, res);
         }
 
-        fprintf(stderr, "ts=%llu total_uj=%llu watts=%f voltage=%f\n", \
-                ts/1000000, uj - uj_start, uj_cur, voltage);
+        fprintf(stderr, "ts=%llu total_uj=%llu watts(pkg)=%f watts(core)=%f voltage=%f\n", \
+                ts/1000000, uj[0] - uj_start[0], uj_cur[0], uj_cur[1], voltage);
 
-        ujprev = uj;
+        for (i = 0; i < 2; i++)
+            ujprev[i] = uj[i];
         sleep(interval);
     }
 }
