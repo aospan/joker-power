@@ -75,12 +75,15 @@ double get_voltage(int bus_id)
 
     if (ioctl(fd, I2C_SLAVE, I2C_ADDR) < 0) {
         fprintf(stderr, "i2c failed for %s. error = %s (%d)\n", filename, strerror(errno), errno);
+        close(fd);
         return 0;
     }
 
     /* start battery voltage calculation */
-    if (i2c_smbus_write_byte_data(fd, 0x72, 0x01) < 0)
+    if (i2c_smbus_write_byte_data(fd, 0x72, 0x01) < 0) {
+        close(fd);
         return 0;
+    }
 
     /* wait until done */
     buf[0] = 0x72;
@@ -95,16 +98,21 @@ double get_voltage(int bus_id)
     }
 
     res = i2c_smbus_read_byte_data(fd, 0x80);
-    if (res < 0)
+    if (res < 0) {
+        close(fd);
         return 0;
+    }
     voltage_i = res << 8;
 
     res = i2c_smbus_read_byte_data(fd, 0x81);
-    if (res < 0)
+    if (res < 0) {
+        close(fd);
         return 0;
+    }
     voltage_i |= res;
     voltage = 5 * voltage_i/1023.0;
 
+    close(fd);
     return voltage;
 }
 
